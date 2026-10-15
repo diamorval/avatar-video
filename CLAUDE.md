@@ -4,11 +4,11 @@
 
 ## Objectif
 
-Générer des vidéos tuto pour le jeu d'acculturation avec la voix et le visage d'un partenaire, à partir d'une seule vidéo de 30 s, avec une gestuelle qui varie selon le contexte du script.
+Générer des vidéos parlées avec la voix et le visage d'une personne réelle, à partir d'une seule vidéo de 30 s, avec une gestuelle qui varie selon le contexte du script. L'outil est générique : tutos, formations, communication interne, présentations produit, messages personnalisés. Premier cas d'usage : les tutos du jeu d'acculturation.
 
 - **Entrée** : une vidéo source de 30 s (fixe) et un script texte (un par vidéo).
-- **Sortie** : un MP4 où le partenaire dit le script avec sa voix, en français.
-- **Cadre** : le partenaire a donné son accord, et il n'y a pas de question de propriété intellectuelle.
+- **Sortie** : un MP4 où la personne dit le script avec sa voix, dans la langue de `config.yaml` (français par défaut).
+- **Cadre** : la personne filmée a donné son accord, et il n'y a pas de question de propriété intellectuelle.
 - **Deux cibles d'exécution** : Mac M5 16 Go (local, gestuelle limitée) ou GPU NVIDIA (gestuelle générée).
 
 ## Choisir son option
@@ -22,7 +22,7 @@ Le Mac suffit si les gestes de la vidéo source conviennent. Le GPU devient néc
 | Vitesse | Lip-sync en temps réel | 10 à 30 min de calcul par minute de vidéo |
 | Matériel | Mac M5, environ 7 Go de mémoire au pic | 24 Go de VRAM minimum (RTX 3090) ; 48 Go et plus pour produire en série (RunPod) |
 | Coût | Nul | Location GPU, ou 3090 locale |
-| Usage type | Tutos courts, ton constant, volume élevé | Tutos variés, mises en scène, gestes précis |
+| Usage type | Vidéos courtes, ton constant, volume élevé | Vidéos variées, mises en scène, gestes précis |
 
 Les deux options partagent la préparation de la source et l'étape de génération de la voix. Seule l'étape vidéo change : le projet expose donc un paramètre `--backend mac|gpu`.
 
@@ -34,7 +34,7 @@ La vidéo de 30 s est préparée une seule fois. Tout le reste en découle.
 
 - Cadrage en buste, mains visibles, face caméra, en 1080p.
 - Lumière stable, fond neutre, rien devant le visage.
-- Le partenaire parle naturellement en français, avec 3 ou 4 gestuelles distinctes : explique, montre à droite, énumère sur les doigts, conclut.
+- La personne parle naturellement, dans la langue des vidéos à produire, avec 3 ou 4 gestuelles distinctes : explique, montre à droite, énumère sur les doigts, conclut.
 - Une seconde bouche fermée au début, pour l'image de référence.
 
 **Extraction (étape `prepare`)**
@@ -82,7 +82,7 @@ Chaque segment est généré de zéro à partir de `ref.png`. Les gestes sont no
 1. **Segmenter** : un LLM découpe le script et attribue à chaque segment soit un `driver` (vidéo de geste), soit un `prompt` (description du geste).
 2. **Voix** : identique à l'option A (Chatterbox ou OmniVoice sur CUDA).
 3. **Vidéo**, deux modes selon le segment :
-    - **Geste précis** : Wan2.2-Animate applique le mouvement d'une vidéo `driver` (toi filmé en train de faire le geste) au partenaire, puis MuseTalk cale la bouche sur l'audio.
+    - **Geste précis** : Wan2.2-Animate applique le mouvement d'une vidéo `driver` (toi filmé en train de faire le geste) à la personne filmée, puis MuseTalk cale la bouche sur l'audio.
     - **Geste libre** : InfiniteTalk (image vers vidéo) génère la vidéo à partir de `ref.png`, de l'audio et du prompt, déjà synchronisée.
 4. **Contrôle qualité** : extraire 3 images par segment pour vérifier les mains et l'identité. Régénérer avec un autre seed en cas de dérive.
 5. **Assemblage** : identique à l'option A.
@@ -131,9 +131,9 @@ avatar-video/
 
 ```json
 [
-  {"id": 1, "text": "Bienvenue dans le jeu.", "clip": "explique"},
+  {"id": 1, "text": "Bienvenue dans cette présentation.", "clip": "explique"},
   {"id": 2, "text": "Regardez à droite.", "driver": "pointe_droite.mp4"},
-  {"id": 3, "text": "Trois règles simples.", "prompt": "il énumère sur ses doigts"}
+  {"id": 3, "text": "Trois points à retenir.", "prompt": "il énumère sur ses doigts"}
 ]
 ```
 
@@ -160,10 +160,10 @@ Compte environ 1 jour pour les étapes 1 à 5 sur Mac, et 1 à 2 jours pour l'é
 
 ## Conformité et points à vérifier
 
-- [ ] Accord écrit du partenaire : périmètre d'usage, durée, suppression des données (`ref.wav`, `ref.png`, source).
+- [ ] Accord écrit de la personne filmée : périmètre d'usage, durée, suppression des données (`ref.wav`, `ref.png`, source).
 - [ ] Mention « vidéo générée par IA » à l'écran : l'AI Act (article 50) impose cette transparence pour les contenus de type deepfake.
 - [ ] Vérifier les licences des poids d'InfiniteTalk, Wan2.2-Animate, JoyVASA et LivePortrait avant tout usage client. Les versions de ces modèles sont citées de mémoire et évoluent vite.
-- [ ] Ne pas versionner `source/` ni `work/` dans git (données biométriques du partenaire).
+- [ ] Ne pas versionner `source/` ni `work/` dans git (données biométriques de la personne filmée).
 
 ## Sources
 

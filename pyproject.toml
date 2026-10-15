@@ -1,7 +1,7 @@
 [project]
 name = "avatar-video"
 version = "0.1.0"
-description = "Vidéos tuto avec avatar IA, backends Mac (MLX) et GPU (ComfyUI)"
+description = "Vidéos parlées avec avatar IA, backends Mac (MLX) et GPU (ComfyUI)"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",

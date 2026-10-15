@@ -39,7 +39,7 @@ export function ScriptForm({ defaultBackend, onSubmit }: Props) {
       <h2>Nouvelle vidéo</h2>
       <label>
         Nom
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Règles du jeu" required />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Présentation produit" required />
       </label>
       <label
         className="av-drop"

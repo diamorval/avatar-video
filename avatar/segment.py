@@ -27,7 +27,7 @@ class Segment(BaseModel):
 
 Segments = TypeAdapter(list[Segment])
 
-PROMPT = """Tu découpes le script d'une vidéo tuto en segments, une phrase par segment.
+PROMPT = """Tu découpes le script d'une vidéo en segments, une phrase par segment.
 Un avatar dit chaque segment avec un geste adapté à son sens.
 
 {gesture_rules}

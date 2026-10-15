@@ -10,7 +10,7 @@ from avatar.voice import voice
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="avatar", description="Vidéos tuto avec avatar IA")
+    parser = argparse.ArgumentParser(prog="avatar", description="Vidéos parlées avec avatar IA")
     parser.add_argument("--config", type=Path, default=Path("config.yaml"))
     sub = parser.add_subparsers(dest="command", required=True)
 

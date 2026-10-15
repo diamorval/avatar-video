@@ -39,7 +39,7 @@ endif
 		echo "Préparation de la source (ref.wav, ref.png, clips)…"; \
 		$(COMPOSE) exec -T app avatar prepare; \
 	fi
-	@[ -f source/source.mp4 ] || echo "À faire : dépose la vidéo du partenaire dans source/source.mp4 puis relance make up."
+	@[ -f source/source.mp4 ] || echo "À faire : dépose la vidéo de la personne filmée dans source/source.mp4 puis relance make up."
 	@echo "App : http://localhost:$(PORT)  (mode $(MODE))"
 
 down:

@@ -1,4 +1,4 @@
-# Données biométriques du partenaire : jamais dans git
+# Données biométriques de la personne filmée : jamais dans git
 source/*
 !source/clips.example.yaml
 !source/drivers/

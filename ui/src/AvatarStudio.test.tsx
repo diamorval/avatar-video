@@ -40,7 +40,7 @@ test("envoie le script et sélectionne la nouvelle vidéo", async () => {
   render(<AvatarStudio api={api} />);
   await screen.findByText("Bienvenue dans le jeu.");
 
-  fireEvent.change(screen.getByPlaceholderText("Règles du jeu"), { target: { value: "Règles" } });
+  fireEvent.change(screen.getByPlaceholderText("Présentation produit"), { target: { value: "Règles" } });
   fireEvent.change(screen.getByPlaceholderText(/Colle le script/), { target: { value: "Trois règles." } });
   await act(async () => fireEvent.click(screen.getByText("Générer")));
 
