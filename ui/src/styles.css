@@ -1,17 +1,25 @@
-/* Variables à surcharger par l'app hôte pour reprendre sa charte. */
+/* Charte Diametral (Charte Graphique V.1) : Geist pour l'interface, Ufficio 300 pour le titre.
+   Variables à surcharger par l'app hôte pour reprendre sa charte. */
+@font-face { font-family: "Geist"; font-weight: 400; font-display: swap; src: url("./assets/diametral/Geist-Regular.woff2") format("woff2"); }
+@font-face { font-family: "Geist"; font-weight: 300; font-display: swap; src: url("./assets/diametral/Geist-Light.woff2") format("woff2"); }
+@font-face { font-family: "Ufficio"; font-weight: 300; font-display: swap; src: url("./assets/diametral/Ufficio-300.woff2") format("woff2"); }
+
 .av-studio {
-  --av-bg: #f6f7f9;
+  --av-bg: #ffffff;
   --av-surface: #ffffff;
-  --av-text: #1d2330;
-  --av-muted: #6b7280;
-  --av-border: #e2e5ea;
-  --av-accent: #3355ff;
+  --av-text: #161616;
+  --av-muted: #767884;
+  --av-border: #d5d3c4;
+  --av-accent: #161616;
   --av-accent-text: #ffffff;
-  --av-ok: #13804b;
-  --av-run: #b45d00;
-  --av-err: #c0262d;
-  --av-radius: 10px;
-  --av-font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --av-marker: #9f8667;
+  --av-on-state: #161616;
+  --av-ok: #53ff64;
+  --av-run: #fff73b;
+  --av-err: #ff2a00;
+  --av-radius: 0;
+  --av-font: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --av-display: "Ufficio", "Geist", system-ui, sans-serif;
 
   font-family: var(--av-font);
   color: var(--av-text);
@@ -22,39 +30,40 @@
 }
 @media (prefers-color-scheme: dark) {
   .av-studio {
-    --av-bg: #12151b;
-    --av-surface: #1b1f27;
-    --av-text: #e7eaf0;
-    --av-muted: #9aa3b2;
-    --av-border: #2c323d;
-    --av-accent: #7b93ff;
-    --av-accent-text: #0d1020;
-    --av-ok: #4cc58a;
-    --av-run: #f0a24a;
-    --av-err: #ff6b70;
+    --av-bg: #161616;
+    --av-surface: #2b2b29;
+    --av-text: #ffffff;
+    --av-muted: #d5d3c4;
+    --av-border: #3a3a38;
+    --av-accent: #d5d3c4;
+    --av-accent-text: #161616;
   }
 }
 .av-studio *, .av-studio *::before, .av-studio *::after { box-sizing: border-box; }
-.av-studio h1 { font-size: 22px; margin: 0; }
+.av-studio h1 { font-family: var(--av-display); font-size: 28px; font-weight: 300; margin: 0; }
+.av-studio h2 { font-weight: 400; }
 .av-studio h2 { font-size: 16px; margin: 0 0 12px; }
-.av-top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.av-top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--av-marker); }
+.av-logo { height: 28px; width: auto; display: block; }
+.av-logo-dark { display: none; }
+@media (prefers-color-scheme: dark) { .av-logo-light { display: none; } .av-logo-dark { display: block; } }
 .av-layout { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 20px; align-items: start; }
 @media (max-width: 760px) { .av-layout { grid-template-columns: 1fr; } .av-studio { padding: 16px; } }
 
 .av-card { background: var(--av-surface); border: 1px solid var(--av-border); border-radius: var(--av-radius); padding: 16px; }
-.av-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+.av-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 300; margin-bottom: 12px; }
 .av-studio input, .av-studio textarea, .av-studio select {
   font: inherit; font-weight: 400; color: var(--av-text); background: var(--av-bg);
-  border: 1px solid var(--av-border); border-radius: 8px; padding: 8px 10px; width: 100%;
+  border: 1px solid var(--av-border); border-radius: var(--av-radius); padding: 8px 10px; width: 100%;
 }
 .av-studio textarea { resize: vertical; }
 .av-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .av-row select { flex: 1; min-width: 160px; width: auto; }
-.av-form .av-file { flex-direction: row; margin: 0; cursor: pointer; color: var(--av-accent); font-weight: 600; }
+.av-form .av-file { flex-direction: row; margin: 0; cursor: pointer; color: var(--av-accent); font-weight: 400; text-decoration: underline; }
 .av-file input { display: none; }
 .av-studio button[type="submit"] {
-  font: inherit; font-weight: 600; background: var(--av-accent); color: var(--av-accent-text);
-  border: 0; border-radius: 8px; padding: 8px 16px; cursor: pointer;
+  font: inherit; background: var(--av-accent); color: var(--av-accent-text);
+  border: 0; border-radius: var(--av-radius); padding: 8px 16px; cursor: pointer;
 }
 .av-studio button[disabled] { opacity: 0.5; cursor: default; }
 
@@ -63,30 +72,32 @@
 .av-item {
   width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px;
   font: inherit; color: inherit; text-align: left; background: var(--av-surface);
-  border: 1px solid var(--av-border); border-radius: 8px; padding: 10px 12px; cursor: pointer;
+  border: 1px solid var(--av-border); border-radius: var(--av-radius); padding: 10px 12px; cursor: pointer;
 }
 .av-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.av-selected { border-color: var(--av-accent); box-shadow: 0 0 0 1px var(--av-accent); }
+.av-selected { border-color: var(--av-marker); box-shadow: 0 0 0 1px var(--av-marker); }
 
-.av-badge { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid currentColor; }
-.av-queued { color: var(--av-muted); }
-.av-running { color: var(--av-run); }
-.av-done { color: var(--av-ok); }
-.av-error { color: var(--av-err); }
-p.av-error { margin: 8px 0; font-size: 13px; overflow-wrap: anywhere; }
-.av-warn { margin: 0; font-size: 13px; color: var(--av-run); }
+.av-badge { font-size: 12px; padding: 2px 8px; white-space: nowrap; border: 1px solid var(--av-border); color: var(--av-muted); }
+.av-running, .av-done, .av-error { color: var(--av-on-state); border-color: transparent; }
+.av-running { background: var(--av-run); }
+.av-done { background: var(--av-ok); }
+.av-error { background: var(--av-err); }
+p.av-error, .av-warn { margin: 8px 0; font-size: 13px; overflow-wrap: anywhere; background: none; color: var(--av-text); padding-left: 10px; }
+p.av-error { border-left: 3px solid var(--av-err); }
+.av-warn { margin: 0; border-left: 3px solid var(--av-run); }
 .av-muted { color: var(--av-muted); font-size: 14px; }
 
 .av-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
 .av-panel-head h2 { margin: 0; }
 .av-steps { list-style: none; display: flex; gap: 6px; padding: 0; margin: 0 0 16px; flex-wrap: wrap; }
-.av-step { flex: 1; min-width: 90px; font-size: 13px; text-align: center; padding: 6px; border-radius: 6px; border: 1px solid var(--av-border); color: var(--av-muted); }
-.av-step-done { color: var(--av-ok); border-color: var(--av-ok); }
-.av-step-running { color: var(--av-run); border-color: var(--av-run); font-weight: 600; }
-.av-step-error { color: var(--av-err); border-color: var(--av-err); font-weight: 600; }
+.av-step { flex: 1; min-width: 90px; font-size: 13px; text-align: center; padding: 6px; border: 1px solid var(--av-border); color: var(--av-muted); }
+.av-step-done, .av-step-running, .av-step-error { color: var(--av-on-state); border-color: transparent; }
+.av-step-done { background: var(--av-ok); }
+.av-step-running { background: var(--av-run); }
+.av-step-error { background: var(--av-err); }
 .av-player { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-.av-player video { width: 100%; border-radius: 8px; background: #000; }
-.av-player a { color: var(--av-accent); font-size: 14px; font-weight: 600; }
+.av-player video { width: 100%; background: #000; }
+.av-player a { color: var(--av-accent); font-size: 14px; }
 .av-segments { width: 100%; border-collapse: collapse; font-size: 14px; }
-.av-segments th { text-align: left; color: var(--av-muted); font-weight: 600; font-size: 12px; }
+.av-segments th { text-align: left; color: var(--av-muted); font-weight: 300; font-size: 12px; }
 .av-segments th, .av-segments td { padding: 6px 8px; border-bottom: 1px solid var(--av-border); vertical-align: top; }

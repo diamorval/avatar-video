@@ -3,6 +3,8 @@ import { createApi, type Api, type SourceInfo, type Video, type VideoDetail } fr
 import { ScriptForm } from "./components/ScriptForm";
 import { VideoList } from "./components/VideoList";
 import { VideoPanel } from "./components/VideoPanel";
+import logoDark from "./assets/diametral/lockup-horizontal-white.png";
+import logoLight from "./assets/diametral/lockup-horizontal-black.png";
 
 export interface AvatarStudioProps {
   /** URL du serveur `avatar serve`. Vide quand l'UI est servie par lui. */
@@ -56,6 +58,8 @@ export function AvatarStudio({ apiBase = "", api: given, pollMs = 2000 }: Avatar
   return (
     <div className="av-studio">
       <header className="av-top">
+        <img className="av-logo av-logo-light" src={logoLight} alt="Diametral" />
+        <img className="av-logo av-logo-dark" src={logoDark} alt="" />
         <h1>Avatar vidéo</h1>
         {info && !info.source_ready && (
           <p className="av-warn">Source non préparée : lance `avatar prepare` avant de générer.</p>

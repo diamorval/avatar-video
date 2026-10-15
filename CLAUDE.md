@@ -206,7 +206,8 @@ Makefile               make up / make down, détection mac ou gpu
 - **Outils MCP** : `get_source_info`, `create_video`, `list_videos`, `get_video`.
 - **Réutiliser l'UI** : `import { AvatarStudio } from "@avatar-video/ui"` et
   `import "@avatar-video/ui/styles.css"`. Les composants (`ScriptForm`, `VideoList`, `VideoPanel`)
-  et le client `createApi` sont exportés séparément. La charte se change en surchargeant les
+  et le client `createApi` sont exportés séparément. La charte par défaut est celle de Diametral
+  (Geist, Ufficio 300, logo, palette V.1, dans `ui/src/assets/diametral/`). Elle se change en surchargeant les
   variables `--av-*` de `.av-studio`.
 
 ## Commandes
