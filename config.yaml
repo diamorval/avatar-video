@@ -1,0 +1,46 @@
+# Configuration du pipeline. Les chemins sont relatifs à ce fichier.
+backend: mac              # mac | gpu, remplaçable par --backend
+language: fr
+
+paths:
+  source: source/source.mp4
+  ref_wav: source/ref.wav
+  ref_png: source/ref.png
+  clips: source/clips.yaml
+  clips_dir: source/clips
+  drivers: source/drivers
+  work: work
+
+prepare:
+  ref_wav_start: 5        # s
+  ref_wav_duration: 20    # s, entre 15 et 20
+  ref_png_time: 0.5       # s, bouche fermée
+
+segment:
+  model: claude-sonnet-5-5  # API Anthropic, clé dans ANTHROPIC_API_KEY
+
+voice:
+  engine: chatterbox      # chatterbox | omnivoice
+  device: mps             # mps (Mac) | cuda (GPU) | cpu
+
+video:
+  width: 1920
+  height: 1080
+  fps: 25
+  fade_frames: 6
+  # Mention AI Act art. 50. Chaîne vide pour la retirer.
+  ai_label: "Vidéo générée par IA"
+
+mac:
+  # Commande de lip-sync MuseTalk 1.5 MLX. À ajuster à l'installation réelle.
+  # Variables : {video} clip bouclé, {audio} seg_N.wav, {out} seg_N.mp4
+  musetalk_cmd: "python -m musetalk_mlx.inference --video {video} --audio {audio} --output {out}"
+
+gpu:
+  comfy_url: http://127.0.0.1:8188
+  workflows:
+    infinitetalk: comfy_workflows/infinitetalk.json
+    animate: comfy_workflows/wan_animate.json
+    musetalk: comfy_workflows/musetalk.json
+  seed: 42
+  timeout: 3600           # s par workflow

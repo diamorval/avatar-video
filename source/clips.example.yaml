@@ -1,0 +1,5 @@
+# Copier en source/clips.yaml. Format : nom: "début-fin" (mm:ss ou hh:mm:ss, décimales permises)
+explique: "00:02-00:09"
+montre_droite: "00:09-00:14"
+enumere: "00:14-00:22"
+conclut: "00:22-00:29"
