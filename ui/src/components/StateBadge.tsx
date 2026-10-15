@@ -1,3 +1,4 @@
+import { Tag, type TagTone } from "@diametral/design-system/react";
 import type { State, Step } from "../api";
 
 export const STEP_LABELS: Record<Step, string> = {
@@ -14,7 +15,14 @@ const STATE_LABELS: Record<State, string> = {
   error: "Erreur",
 };
 
+export const STATE_TONES: Record<State, TagTone> = {
+  queued: "neutral",
+  running: "warning",
+  done: "success",
+  error: "danger",
+};
+
 export function StateBadge({ state, step }: { state: State; step: Step | null }) {
   const label = state === "running" && step ? STEP_LABELS[step] : STATE_LABELS[state];
-  return <span className={`av-badge av-${state}`}>{label}</span>;
+  return <Tag tone={STATE_TONES[state]}>{label}</Tag>;
 }
