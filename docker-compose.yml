@@ -1,0 +1,61 @@
+# Lancé par `make up` (qui crée .env et choisit le mode mac ou gpu).
+x-data: &data
+  - ./config.yaml:/app/config.yaml:ro
+  - ./source:/app/source
+  - ./scripts:/app/scripts
+  - ./work:/app/work
+  - ./comfy_workflows:/app/comfy_workflows:ro
+
+x-gpu: &gpu
+  resources:
+    reservations:
+      devices: [{ driver: nvidia, count: all, capabilities: [gpu] }]
+
+services:
+  # API REST + UI + serveur MCP (`docker compose exec -T app avatar mcp`, voir .mcp.json).
+  app:
+    build: { context: ., target: app }
+    image: avatar-video-app
+    user: "${AVATAR_UID:-0}:${AVATAR_GID:-0}"  # fichiers de source/ et work/ à ton nom
+    env_file: .env
+    environment:
+      AVATAR_BACKEND: ${AVATAR_BACKEND:-mac}
+      AVATAR_PUBLIC_URL: http://localhost:${AVATAR_PORT:-8787}
+    ports: ["127.0.0.1:${AVATAR_PORT:-8787}:8787"]
+    volumes: *data
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    restart: unless-stopped
+
+  # Machine NVIDIA uniquement (profil gpu). Sur Mac, le worker tourne en natif.
+  worker:
+    profiles: [gpu]
+    build: { context: ., target: worker-gpu }
+    image: avatar-video-worker-gpu
+    user: "${AVATAR_UID:-0}:${AVATAR_GID:-0}"
+    env_file: .env
+    environment:
+      HF_HOME: /cache/huggingface
+      AVATAR_BACKEND: gpu
+      AVATAR_VOICE_DEVICE: cuda
+      AVATAR_COMFY_URL: http://comfyui:8188
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./source:/app/source
+      - ./scripts:/app/scripts
+      - ./work:/app/work
+      - ./comfy_workflows:/app/comfy_workflows:ro
+      - ./models/huggingface:/cache/huggingface  # poids Chatterbox, téléchargés une fois
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    depends_on: [comfyui]
+    restart: unless-stopped
+    deploy: *gpu
+
+  comfyui:
+    profiles: [gpu]
+    build: { context: docker, dockerfile: comfyui.Dockerfile }
+    image: avatar-video-comfyui
+    ports: ["127.0.0.1:8188:8188"]  # pour ouvrir ComfyUI et exporter les workflows
+    volumes:
+      - ./models:/comfyui/models
+    restart: unless-stopped
+    deploy: *gpu

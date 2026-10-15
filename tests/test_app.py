@@ -1,17 +1,19 @@
 import asyncio
 import json
+import os
 import sys
+import threading
 import time
 
 import pytest
 from fastapi.testclient import TestClient
 from mcp import Client, StdioServerParameters
 
-from avatar import segment, voice
+from avatar import config, segment, voice
 from avatar.mcp_server import create_mcp
 from avatar.prepare import prepare
 from avatar.server import create_app
-from avatar.service import Jobs, slug
+from avatar.service import STALE, Jobs, slug
 from tests.conftest import set_config
 from tests.test_run import SEGMENTS, fake_synth
 
@@ -26,6 +28,17 @@ def jobs(project, monkeypatch):
     monkeypatch.setattr(segment, "gateway_llm", lambda url, model: lambda p: json.dumps(SEGMENTS))
     monkeypatch.setattr(voice, "load_engine", lambda cfg: fake_synth)
     return Jobs(cfg)
+
+
+@pytest.fixture
+def worker(jobs):
+    """Le worker tourne dans un thread, comme `avatar worker` dans son processus."""
+    stop = threading.Event()
+    thread = threading.Thread(target=jobs.work_forever, args=(stop, 0.2), daemon=True)
+    thread.start()
+    yield
+    stop.set()
+    thread.join()
 
 
 def wait_done(get, video_id, timeout=120):
@@ -43,7 +56,7 @@ def test_slug():
     assert slug("???") == "video"
 
 
-def test_rest_creates_video_and_serves_final(jobs):
+def test_rest_creates_video_and_serves_final(jobs, worker):
     client = TestClient(create_app(jobs.cfg, jobs))
     assert client.get("/api/info").json() == {
         "default_backend": "mac",
@@ -84,14 +97,40 @@ def test_rest_rejects_bad_input(jobs):
     assert client.get("/api/videos/..%2Fsource").status_code == 404
 
 
-def test_final_is_hidden_until_done(jobs, monkeypatch):
-    monkeypatch.setattr(jobs.queue, "put", lambda video_id: None)  # pas d'exécution
+def test_final_is_hidden_until_done(jobs):
     video_id = jobs.create("En cours", SCRIPT)["id"]
     (jobs.cfg.path("work") / video_id / "final.mp4").write_bytes(b"partiel")
     assert jobs.get(video_id)["final"] is None
 
 
-def test_pipeline_error_is_reported(jobs, monkeypatch):
+def test_only_one_worker_claims_a_video(jobs):
+    video_id = jobs.create("Unique", SCRIPT)["id"]
+    other = Jobs(jobs.cfg)  # un second worker, autre processus en vrai
+    assert jobs.claim_next() == video_id
+    assert other.claim_next() is None
+
+
+def test_reap_marks_videos_of_dead_workers(jobs):
+    video_id = jobs.create("Orpheline", SCRIPT)["id"]
+    assert jobs.claim_next() == video_id
+    jobs.reap()
+    assert jobs.get(video_id)["state"] == "queued"  # worker vivant
+    claim = jobs.cfg.path("work") / video_id / "claim"
+    old = time.time() - STALE - 1
+    os.utime(claim, (old, old))
+    jobs.reap()
+    status = jobs.get(video_id)
+    assert status["state"] == "error" and "worker arrêté" in status["error"]
+
+
+def test_env_overrides_config(project, monkeypatch):
+    monkeypatch.setenv("AVATAR_BACKEND", "gpu")
+    monkeypatch.setenv("LLM_GATEWAY_URL", "http://gateway:4000/v1")
+    cfg = config.load(project.root / "config.yaml")
+    assert cfg["backend"] == "gpu" and cfg["segment"]["base_url"] == "http://gateway:4000/v1"
+
+
+def test_pipeline_error_is_reported(jobs, worker, monkeypatch):
     monkeypatch.setattr(segment, "gateway_llm", lambda url, model: lambda p: "pas de JSON")
     video_id = jobs.create("Erreur", SCRIPT)["id"]
     status = wait_done(jobs.get, video_id)
@@ -114,7 +153,7 @@ def call_tool(server, tool, **args):
     return asyncio.run(go())
 
 
-def test_mcp_create_video_with_claude_segments(jobs, monkeypatch):
+def test_mcp_create_video_with_claude_segments(jobs, worker, monkeypatch):
     # Claude fournit le découpage : la passerelle LLM ne doit pas être appelée.
     monkeypatch.setattr(segment, "gateway_llm", lambda url, model: pytest.fail("LLM appelé"))
     mcp = create_mcp(jobs.cfg, jobs)
@@ -123,6 +162,7 @@ def test_mcp_create_video_with_claude_segments(jobs, monkeypatch):
     status = wait_done(lambda i: call_tool(mcp, "get_video", video_id=i)[1], created["id"])
     assert status["state"] == "done", status["error"]
     assert status["final"].endswith("work/par-claude/final.mp4")
+    assert status["url"] == "http://localhost:8787/api/videos/par-claude/final.mp4"
     assert [v["id"] for v in call_tool(mcp, "list_videos")[1]] == ["par-claude"]
 
 

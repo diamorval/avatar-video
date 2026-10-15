@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import yaml
@@ -19,6 +20,23 @@ class Config(dict):
         return d
 
 
+# Variables d'environnement qui priment sur config.yaml (Docker, .env).
+ENV = {
+    "AVATAR_BACKEND": ("backend",),
+    "AVATAR_VOICE_DEVICE": ("voice", "device"),
+    "AVATAR_COMFY_URL": ("gpu", "comfy_url"),
+    "LLM_GATEWAY_URL": ("segment", "base_url"),
+    "LLM_GATEWAY_MODEL": ("segment", "model"),
+}
+
+
 def load(path: Path) -> Config:
     path = path.resolve()
-    return Config(yaml.safe_load(path.read_text()), path.parent)
+    data = yaml.safe_load(path.read_text())
+    for var, keys in ENV.items():
+        if os.environ.get(var):
+            node = data
+            for key in keys[:-1]:
+                node = node[key]
+            node[keys[-1]] = os.environ[var]
+    return Config(data, path.parent)

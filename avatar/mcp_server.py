@@ -1,5 +1,7 @@
 """Serveur MCP (stdio) : Claude Code pilote les mêmes vidéos que l'app web."""
 
+import os
+
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
@@ -38,10 +40,14 @@ def create_mcp(cfg: Config, jobs: Jobs) -> MCPServer:
 
     @mcp.tool()
     def get_video(video_id: str) -> dict:
-        """État d'une vidéo, ses segments, et le chemin de final.mp4 une fois terminée."""
+        """État d'une vidéo, ses segments, et l'URL de final.mp4 une fois terminée."""
         status = jobs.get(video_id)
         if status is None:
             raise ToolError(f"vidéo inconnue : {video_id}")
+        if status["final"]:
+            # Le chemin vaut dans le conteneur ; l'URL vaut pour l'utilisateur.
+            base = os.environ.get("AVATAR_PUBLIC_URL", "http://localhost:8787")
+            status["url"] = f"{base}/api/videos/{video_id}/final.mp4"
         return status
 
     return mcp

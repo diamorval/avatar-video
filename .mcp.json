@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "avatar-video": {
-      "command": "uv",
-      "args": ["run", "avatar", "mcp"]
+      "command": "docker",
+      "args": ["compose", "exec", "-T", "app", "avatar", "mcp"]
     }
   }
 }

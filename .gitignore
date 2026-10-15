@@ -15,3 +15,7 @@ __pycache__/
 node_modules/
 ui/dist/
 *.tsbuildinfo
+# make up
+.env
+.worker.pid
+models/

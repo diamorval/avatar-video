@@ -1,12 +1,13 @@
 """Moteur commun à l'app (REST) et à Claude (MCP) : crée et exécute les vidéos en tâche de fond.
 
-L'état de chaque vidéo vit dans work/<id>/status.json : l'app et le serveur MCP, même lancés
-dans deux processus, voient les mêmes vidéos.
+L'app et le serveur MCP ne font que créer et lire des vidéos. Un processus `avatar worker` les
+exécute : en conteneur sur une machine GPU, en natif sur Mac (MLX n'a pas accès au GPU en Docker).
+Tout passe par le disque partagé : work/<id>/status.json porte l'état, et work/<id>/claim, créé
+de façon exclusive puis touché régulièrement, dit quel worker exécute la vidéo et s'il vit encore.
 """
 
 import json
 import os
-import queue
 import re
 import threading
 import time
@@ -48,25 +49,17 @@ def source_info(cfg: Config) -> dict:
     }
 
 
-def _alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
+HEARTBEAT = 10  # s entre deux signes de vie du worker
+STALE = 60  # s sans signe de vie : le worker est considéré comme arrêté
 
 
 class Jobs:
     def __init__(self, cfg: Config):
         self.cfg = cfg
-        self.queue: queue.Queue[str] = queue.Queue()
         self.lock = threading.Lock()
-        for status in self.list():
-            if status["state"] in ("queued", "running") and not _alive(status["pid"]):
-                self._update(status["id"], state="error", error="interrompu (processus arrêté)")
-        threading.Thread(target=self._worker, daemon=True).start()
+
+    def _claim_path(self, video_id: str):
+        return self.cfg.path("work") / video_id / "claim"
 
     def _status_path(self, video_id: str):
         return self.cfg.path("work") / video_id / "status.json"
@@ -75,7 +68,9 @@ class Jobs:
         path = self._status_path(video_id)
         status = json.loads(path.read_text()) if path.exists() else {}
         status.update(fields, updated=time.time())
-        path.write_text(json.dumps(status, ensure_ascii=False, indent=2))
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(status, ensure_ascii=False, indent=2))
+        tmp.replace(path)  # atomique : un lecteur ne voit jamais un fichier à moitié écrit
         return status
 
     def create(self, name: str, script: str, backend: str | None = None, segments=None) -> dict:
@@ -104,9 +99,8 @@ class Jobs:
             raise
         status = self._update(
             video_id, id=video_id, name=name, backend=backend, state="queued", step=None,
-            error=None, created=time.time(), pid=os.getpid(),
+            error=None, created=time.time(),
         )  # fmt: skip
-        self.queue.put(video_id)
         return status
 
     def list(self) -> list[dict]:
@@ -127,16 +121,49 @@ class Jobs:
         status["final"] = str(work / "final.mp4") if done else None
         return status
 
-    def _worker(self) -> None:
+    def claim_next(self) -> str | None:
+        """Réserve la plus ancienne vidéo en file, ou None. Sûr entre plusieurs workers."""
+        for status in reversed(self.list()):
+            if status["state"] != "queued":
+                continue
+            try:
+                os.close(os.open(self._claim_path(status["id"]), os.O_CREAT | os.O_EXCL))
+            except FileExistsError:
+                continue
+            return status["id"]
+        return None
+
+    def reap(self) -> None:
+        """Passe en erreur les vidéos dont le worker ne donne plus signe de vie."""
+        for status in self.list():
+            claim = self._claim_path(status["id"])
+            if status["state"] in ("queued", "running") and claim.exists():
+                if time.time() - claim.stat().st_mtime > STALE:
+                    self._update(status["id"], state="error", error="interrompu (worker arrêté)")
+
+    def work_forever(self, stop: threading.Event | None = None, poll: float = 2) -> None:
         # Une vidéo à la fois : le Mac comme le GPU n'ont la mémoire que pour un modèle.
-        while True:
-            self.run(self.queue.get())
+        stop = stop or threading.Event()
+        while not stop.is_set():
+            self.reap()
+            video_id = self.claim_next()
+            if video_id:
+                self.run(video_id)
+            else:
+                stop.wait(poll)
 
     def run(self, video_id: str) -> None:
         status = json.loads(self._status_path(video_id).read_text())
         backend = status["backend"]
         work = self.cfg.path("work") / video_id
         script = self.cfg.root / "scripts" / f"{video_id}.txt"
+        done = threading.Event()
+
+        def heartbeat():
+            while not done.wait(HEARTBEAT):
+                self._claim_path(video_id).touch()
+
+        threading.Thread(target=heartbeat, daemon=True).start()
         try:
             for step in STEPS:
                 if step == "segment" and (work / "segments.json").exists():
@@ -153,3 +180,5 @@ class Jobs:
             self._update(video_id, state="done", step=None)
         except Exception as e:  # l'erreur est rendue à l'app et à Claude via status.json
             self._update(video_id, state="error", error=f"{type(e).__name__}: {e}")
+        finally:
+            done.set()
