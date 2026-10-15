@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Alert, Wordmark } from "@diametral/design-system/react";
 import { createApi, type Api, type SourceInfo, type Video, type VideoDetail } from "./api";
 import { ScriptForm } from "./components/ScriptForm";
 import { VideoList } from "./components/VideoList";
@@ -56,12 +57,13 @@ export function AvatarStudio({ apiBase = "", api: given, pollMs = 2000 }: Avatar
   return (
     <div className="av-studio">
       <header className="av-top">
+        <Wordmark />
         <h1>Avatar vidéo</h1>
         {info && !info.source_ready && (
-          <p className="av-warn">Source non préparée : lance `avatar prepare` avant de générer.</p>
+          <Alert tone="warning">Source non préparée : lance `avatar prepare` avant de générer.</Alert>
         )}
       </header>
-      {error && <p className="av-error">{error}</p>}
+      {error && <Alert tone="danger" className="av-alert">{error}</Alert>}
       <div className="av-layout">
         <aside>
           <ScriptForm
