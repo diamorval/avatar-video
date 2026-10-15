@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "avatar-video": {
+      "command": "uv",
+      "args": ["run", "avatar", "mcp"]
+    }
+  }
+}

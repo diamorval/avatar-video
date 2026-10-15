@@ -17,7 +17,9 @@ prepare:
   ref_png_time: 0.5       # s, bouche fermée
 
 segment:
-  model: claude-sonnet-5-5  # API Anthropic, clé dans ANTHROPIC_API_KEY
+  # Passerelle LLM compatible OpenAI (LiteLLM, OpenRouter, Azure...), clé dans LLM_GATEWAY_API_KEY
+  base_url: http://localhost:4000/v1
+  model: claude-sonnet-5-5
 
 voice:
   engine: chatterbox      # chatterbox | omnivoice

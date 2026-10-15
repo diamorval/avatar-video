@@ -1,8 +1,10 @@
 import json
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
 
-from avatar.segment import build_prompt, load, segment
+from avatar.segment import build_prompt, gateway_llm, load, segment
 
 SCRIPT = "Bienvenue dans le jeu. Regardez à droite. Trois règles simples."
 
@@ -66,3 +68,35 @@ def test_segment_without_gesture_is_invalid(project):
 def test_gpu_prompt_lists_drivers():
     prompt = build_prompt(SCRIPT, "gpu", [], ["pointe_droite.mp4"])
     assert "pointe_droite.mp4" in prompt and SCRIPT in prompt
+
+
+def test_gateway_llm_posts_openai_chat_completion(monkeypatch):
+    seen = {}
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            seen["path"] = self.path
+            seen["auth"] = self.headers["Authorization"]
+            seen["body"] = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            body = json.dumps({"choices": [{"message": {"content": "[]"}}]}).encode()
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    monkeypatch.setenv("LLM_GATEWAY_API_KEY", "sk-test")
+
+    ask = gateway_llm(f"http://127.0.0.1:{server.server_port}/v1/", "mon-modele")
+    assert ask("bonjour") == "[]"
+    server.shutdown()
+    assert seen["path"] == "/v1/chat/completions"
+    assert seen["auth"] == "Bearer sk-test"
+    assert seen["body"] == {
+        "model": "mon-modele",
+        "messages": [{"role": "user", "content": "bonjour"}],
+    }

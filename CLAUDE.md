@@ -174,21 +174,53 @@ Compte environ 1 jour pour les étapes 1 à 5 sur Mac, et 1 à 2 jours pour l'é
 - [Comparatif TTS open source 2026 (Second Talent)](https://www.secondtalent.com/resources/open-source-ai-voice-generators/)
 - [GitHub topic talking-avatar](https://github.com/topics/talking-avatar)
 
+## App web et MCP
+
+Deux portes, un moteur : l'app web (REST) et Claude (MCP) appellent le même `avatar/service.py`.
+Tout est automatique : on envoie un script, le service enchaîne segment, voice, video et assemble
+en tâche de fond, une vidéo à la fois. L'état de chaque vidéo vit dans `work/<id>/status.json` :
+une vidéo lancée par Claude apparaît dans l'app, et inversement.
+
+```text
+avatar/service.py      Jobs : création, file, exécution, état (status.json)
+avatar/server.py       API REST /api + UI compilée (ui/dist), lancé par `avatar serve`
+avatar/mcp_server.py   outils MCP, lancé en stdio par `avatar mcp` (.mcp.json)
+ui/                    UI React réutilisable : <AvatarStudio apiBase="..." />
+```
+
+- **Découpage** : la passerelle LLM compatible OpenAI de `config.yaml` (`segment.base_url`,
+  `segment.model`, clé dans `LLM_GATEWAY_API_KEY`). Via MCP, Claude peut passer ses propres
+  `segments` à `create_video` et se passer de la passerelle.
+- **API REST** : `GET /api/info`, `GET|POST /api/videos`, `GET /api/videos/{id}`,
+  `GET /api/videos/{id}/final.mp4`.
+- **Outils MCP** : `get_source_info`, `create_video`, `list_videos`, `get_video`.
+- **Réutiliser l'UI** : `import { AvatarStudio } from "@avatar-video/ui"` et
+  `import "@avatar-video/ui/styles.css"`. Les composants (`ScriptForm`, `VideoList`, `VideoPanel`)
+  et le client `createApi` sont exportés séparément. La charte se change en surchargeant les
+  variables `--av-*` de `.av-studio`.
+
 ## Commandes
 
 ```bash
-uv sync                                   # dépendances de base (prepare, segment, assemble)
+uv sync                                   # dépendances de base (prepare, segment, assemble, app, MCP)
 uv sync --extra chatterbox               # ou --extra omnivoice (torch, sur la machine cible)
 uv run avatar prepare                     # ref.wav, ref.png, source/clips/<nom>.mp4
 uv run avatar run scripts/regles.txt --backend mac
 uv run avatar segment|voice|video|assemble scripts/regles.txt [--backend mac|gpu]
+uv run avatar serve                       # app web sur http://localhost:8787
+uv run avatar mcp                         # serveur MCP stdio (Claude Code le lance via .mcp.json)
 uv run pytest                             # tests (ffmpeg requis, pas de modèle)
 uv run ruff check . && uv run ruff format --check .
+cd ui && npm install && npm run build     # UI servie ensuite par `avatar serve`
+cd ui && npm run dev                      # UI en dev (Vite), proxy /api vers :8787
+cd ui && npm run typecheck && npm test
 ```
 
 ## État de l'implémentation
 
-- Implémenté et testé (CI Linux, ffmpeg) : `prepare`, `segment` (LLM simulé dans les tests), `assemble`, `run`.
+- Implémenté et testé (Linux, ffmpeg) : `prepare`, `segment` (passerelle simulée dans les tests),
+  `assemble`, `run`, service de jobs, API REST, serveur MCP (stdio), UI React (vitest et
+  vérification Playwright sur un pipeline simulé).
 - Implémenté, à valider sur la machine cible : `voice` (Chatterbox, OmniVoice), `video --backend mac`
   (commande MuseTalk dans `config.yaml`, à ajuster à l'installation réelle), `video --backend gpu`
   (workflows ComfyUI à exporter dans `comfy_workflows/`, voir son README).

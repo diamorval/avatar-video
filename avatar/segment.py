@@ -1,5 +1,7 @@
 import json
+import os
 import re
+import urllib.request
 from collections.abc import Callable
 from pathlib import Path
 
@@ -74,37 +76,48 @@ def parse(reply: str) -> list[Segment]:
     return Segments.validate_python(json.loads(match.group(0)))
 
 
-def anthropic_llm(model: str) -> Callable[[str], str]:
-    import anthropic
-
-    client = anthropic.Anthropic()
+def gateway_llm(base_url: str, model: str) -> Callable[[str], str]:
+    """Passerelle LLM compatible OpenAI (POST /chat/completions), clé dans LLM_GATEWAY_API_KEY."""
+    key = os.environ.get("LLM_GATEWAY_API_KEY", "")
 
     def ask(prompt: str) -> str:
-        msg = client.messages.create(
-            model=model, max_tokens=4096, messages=[{"role": "user", "content": prompt}]
+        body = {"model": model, "messages": [{"role": "user", "content": prompt}]}
+        req = urllib.request.Request(
+            base_url.rstrip("/") + "/chat/completions",
+            data=json.dumps(body).encode(),
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"},
         )
-        return "".join(b.text for b in msg.content if b.type == "text")
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return json.loads(r.read())["choices"][0]["message"]["content"]
 
     return ask
 
 
-def segment(
-    cfg: Config, script_path: Path, backend: str, llm: Callable[[str], str] | None = None
-) -> Path:
+def gestures(cfg: Config, backend: str) -> tuple[list[str], list[str]]:
+    """Gestes disponibles : (clips de clips.yaml pour mac, vidéos driver pour gpu)."""
     clips = list(load_clips(cfg.path("clips"))) if backend == "mac" else []
     drivers = sorted(p.name for p in cfg.path("drivers").glob("*.mp4"))
-    llm = llm or anthropic_llm(cfg["segment"]["model"])
+    return clips, drivers
 
-    segments = parse(llm(build_prompt(script_path.read_text(), backend, clips, drivers)))
-    validate(segments, backend, clips, drivers)
 
-    out = cfg.work_dir(script_path.stem) / "segments.json"
+def save(cfg: Config, video_id: str, segments: list[Segment], backend: str) -> Path:
+    """Valide les segments contre les gestes disponibles et écrit segments.json."""
+    validate(segments, backend, *gestures(cfg, backend))
+    out = cfg.work_dir(video_id) / "segments.json"
     out.write_text(
         json.dumps(
             [s.model_dump(exclude_none=True) for s in segments], ensure_ascii=False, indent=2
         )
     )
     return out
+
+
+def segment(
+    cfg: Config, script_path: Path, backend: str, llm: Callable[[str], str] | None = None
+) -> Path:
+    llm = llm or gateway_llm(cfg["segment"]["base_url"], cfg["segment"]["model"])
+    prompt = build_prompt(script_path.read_text(), backend, *gestures(cfg, backend))
+    return save(cfg, script_path.stem, parse(llm(prompt)), backend)
 
 
 def load(path: Path) -> list[Segment]:

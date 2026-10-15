@@ -4,9 +4,11 @@ version = "0.1.0"
 description = "Vidéos tuto avec avatar IA, backends Mac (MLX) et GPU (ComfyUI)"
 requires-python = ">=3.11"
 dependencies = [
-    "anthropic>=0.40",
+    "fastapi>=0.115",
+    "mcp>=2.3,<3",
     "pydantic>=2.6",
     "pyyaml>=6.0",
+    "uvicorn>=0.30",
 ]
 
 [project.optional-dependencies]
@@ -17,7 +19,7 @@ omnivoice = ["omnivoice", "torchaudio"]
 avatar = "avatar.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["httpx>=0.27", "pytest>=8", "ruff>=0.6"]
 
 [build-system]
 requires = ["hatchling"]

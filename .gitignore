@@ -11,3 +11,7 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
+# UI
+node_modules/
+ui/dist/
+*.tsbuildinfo

@@ -22,7 +22,7 @@ def fake_synth(text, out):
 def test_run_mac_produces_final_video(project, monkeypatch):
     # MuseTalk remplacé par une copie du clip bouclé : on teste la tuyauterie, pas le modèle.
     cfg = set_config(project, mac={"musetalk_cmd": "cp {video} {out}"})
-    monkeypatch.setattr(segment, "anthropic_llm", lambda model: lambda p: json.dumps(SEGMENTS))
+    monkeypatch.setattr(segment, "gateway_llm", lambda url, model: lambda p: json.dumps(SEGMENTS))
     monkeypatch.setattr(voice, "load_engine", lambda cfg: fake_synth)
 
     cli.main(["--config", str(cfg.root / "config.yaml"), "prepare"])

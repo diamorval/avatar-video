@@ -3,20 +3,10 @@ from pathlib import Path
 
 from avatar import config
 from avatar.assemble import assemble
-from avatar.backends import gpu, mac
 from avatar.prepare import prepare
-from avatar.segment import load, segment
+from avatar.segment import segment
+from avatar.service import Jobs, render_video
 from avatar.voice import voice
-
-
-def video(cfg, video_id: str, backend: str, only: int | None = None, seed: int | None = None):
-    for seg in load(cfg.work_dir(video_id) / "segments.json"):
-        if only is not None and seg.id != only:
-            continue
-        if backend == "mac":
-            mac.render(cfg, video_id, seg)
-        else:
-            gpu.render(cfg, video_id, seg, seed)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -25,6 +15,9 @@ def main(argv: list[str] | None = None) -> None:
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("prepare", help="extrait ref.wav, ref.png et les clips de clips.yaml")
+    serve = sub.add_parser("serve", help="app web : API REST et UI React sur http://localhost:PORT")
+    serve.add_argument("--port", type=int, default=8787)
+    sub.add_parser("mcp", help="serveur MCP en stdio, pour Claude Code (.mcp.json)")
     for name, text in [
         ("segment", "script -> segments.json (LLM)"),
         ("voice", "segments.json -> seg_N.wav"),
@@ -44,6 +37,18 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "prepare":
         prepare(cfg)
         return
+    if args.command == "serve":
+        import uvicorn
+
+        from avatar.server import create_app
+
+        uvicorn.run(create_app(cfg, Jobs(cfg)), host="127.0.0.1", port=args.port)
+        return
+    if args.command == "mcp":
+        from avatar.mcp_server import create_mcp
+
+        create_mcp(cfg, Jobs(cfg)).run()
+        return
 
     video_id = args.script.stem
     backend = args.backend or cfg["backend"]
@@ -52,9 +57,9 @@ def main(argv: list[str] | None = None) -> None:
     if args.command in ("voice", "run"):
         voice(cfg, video_id)
     if args.command == "video":
-        video(cfg, video_id, backend, args.segment, args.seed)
+        render_video(cfg, video_id, backend, args.segment, args.seed)
     if args.command == "run":
-        video(cfg, video_id, backend)
+        render_video(cfg, video_id, backend)
     if args.command in ("assemble", "run"):
         print(assemble(cfg, video_id))
 
